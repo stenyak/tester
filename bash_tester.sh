@@ -65,9 +65,9 @@ else
         total=$(($fail + $pass))
         if [ "$fail" -gt "0" ]
         then
-            text="FAIL $(pwd) $input $output $ret $pass $total"
+            text="FAIL $(pwd) $input $output $ret $fail $pass $total"
         else
-            text="PASS $(pwd) $input $output $ret $pass $total"
+            text="PASS $(pwd) $input $output $ret $fail $pass $total"
         fi
     else
         #not unittests
