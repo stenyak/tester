@@ -1,2 +1,3 @@
-#!bash_tester.sh
-echo what here
+#!/usr/bin/foobar
+true
+false
