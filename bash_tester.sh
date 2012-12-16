@@ -46,7 +46,6 @@ else
     input_tmp="$input.tmp"
     tools="$(path_file bash_tester_tools.sh)"
     cat "$input" | sed "1 s%^.*$%source $tools $input%g" > "$input_tmp"
-    $tp -t 1 bash "$input_tmp" &> "$output"
     if ! test -f "$tp"
     then
         echo "Error: helper timeout script not found: $tp"
