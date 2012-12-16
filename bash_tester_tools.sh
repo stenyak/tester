@@ -8,12 +8,7 @@ btt_test_ret=0
 btt_lastline=0
 function btt_print_results()
 {
-    if [ "$btt_results" == "" ]
-    then
-        echo "Ran 0 tests"
-    else
-        echo "$btt_results"
-    fi
+    echo "${btt_results:-Ran 0 tests}"
     exit $btt_test_ret
 }
 function btt_fail ()
