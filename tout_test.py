@@ -4,7 +4,7 @@ import unittest
 class TestFail(unittest.TestCase):
     def testBasic(self):
         import time
-        time.sleep(10)
+        time.sleep(2)
 
 if __name__ == '__main__':
     unittest.main()
