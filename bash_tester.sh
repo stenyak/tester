@@ -74,7 +74,7 @@ else
         then
             text="TOUT $(pwd) $input $output"
         else
-            if cat $output | grep "^Ran 0 tests in " &>/dev/null
+            if cat $output | grep "^Ran 0 tests" &>/dev/null
             then
                 text="NOOP $(pwd) $input $output $ret"
             else
