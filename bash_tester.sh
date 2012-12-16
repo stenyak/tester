@@ -45,7 +45,7 @@ then
 else
     input_tmp="$input.tmp"
     tools="$(path_file bash_tester_tools.sh)"
-    cat "$input" | sed "1 s%^.*$%source $tools $input_tmp%g" > "$input_tmp"
+    cat "$input" | sed "1 s%^.*$%source $tools $input%g" > "$input_tmp"
     $tp -t 1 bash "$input_tmp" &> "$output"
     ret=$?
 
