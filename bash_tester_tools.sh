@@ -48,6 +48,8 @@ function btt_debug ()
 {
     local ret=$1 # error status
     local line=$2 # LINENO
+    local cmd="$3"
+    if echo "$cmd" | grep btt_debug &>/dev/null; then return; fi
     if [ "$ret" -eq 0 ]
     then
         btt_results="${btt_results}."
