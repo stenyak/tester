@@ -2,25 +2,26 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
-test_interpreter="python"
 if [ "$OSTYPE" == "darwin10.0"  ]; then platform="osx"; fi
 if [ "$OSTYPE" == "msys"        ]; then platform="win"; fi
 if [ "$OSTYPE" == "linux-gnu"   ]; then platform="lin"; fi
 function die()
 {
     local message="$1"; shift
-    echo "Error: $message"
+    echo "$message"
     exit 1
 }
 function real_path()
 {
-    if [ "$platform" == "lin" ]; then readlink -f "$1"
-    else echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    local path="$1"; shift
+    if [ "$platform" == "lin" ]; then readlink -f "$path"
+    else echo "$(cd "$(dirname "$path")"; pwd)/$(basename "$path")"
     fi
 }
 function relative_path()
 {
-    python -c "import os.path; print os.path.relpath('$(real_path "$1")', '$PWD')"
+    local path="$1"; shift
+    python -c "import os.path; print os.path.relpath('$(real_path "$path")', '$PWD')"
 }
 function tmp_file()
 {
@@ -31,23 +32,17 @@ function tmp_file()
     touch "$result"
     echo "$result"
 }
-input="$(relative_path $1)"
-output="$(tmp_file)"
-tp="/home/visual/venom/src/build/venom/timeout.sh"
-
-function is_test()
+function get_interpreter()
 {
-    local test_interpreter="$1"; shift
     local input="$1"; shift
-    if [ "$test_interpreter" == "bash" ]; then
-        head -n 1 "$input" |grep '^#!.*\(bash\|bash_tester\)' &>/dev/null
-        #should be a bash or bash_tester script with a shebang
-    elif [ "$test_interpreter" == "python" ]; then
-        head -n 1 "$input" |grep '^#!.*python' &>/dev/null
-        #should be a python script with a shebang
-    else
-        die "Unknown type of test: $test_interpreter"
+    local result=""
+    head -n 1 "$input" |grep "^#!..*" &>/dev/null || die "Script has to start with a shebang line"
+    if echo "$input" |grep "\.sh$" &>/dev/null; then result="bash"
+    elif echo "$input" |grep "\.py$" &>/dev/null; then result="python"
+    else die "Only .sh and .py files are supported: $input"
     fi
+    head -n 1 "$input" |grep "$result" &>/dev/null || die "File extension and shebang combination not supported: $input"
+    echo "$result"
 }
 function get_results_line()
 {
@@ -96,42 +91,50 @@ function run_test()
     ret="$?"
     return "$ret"
 }
+input="$1"; shift
+input="$(relative_path $input)"
+output="$(tmp_file)"
+tp="/home/visual/venom/src/build/venom/timeout.sh"
 
-if ! is_test "$test_interpreter" "$input"
+test_interpreter="$(get_interpreter "$input")"
+ret="$?"
+if [ "$ret" -ne 0 ]
 then
-    echo "Error: in order to work, insert a shebang line at the beginning of $input" > "$output"
-    ret=1
-    text="WHAT $(pwd) $input $output $ret"
-else
-    run_test "$test_interpreter" "$input" "$output"
-    ret=$?
+    echo "Shebang line, file extension, or interpreter are not correct. ($test_interpreter)" > "$output"
+    echo "WHAT $(pwd) $input $output $ret"
+    exit $ret
+fi
 
-    line="$(get_results_line "$test_interpreter" "$output")"
-    if is_test "$test_interpreter" "$input" && is_unittest_results "$line"
+
+run_test "$test_interpreter" "$input" "$output"
+ret=$?
+
+line="$(get_results_line "$test_interpreter" "$output")"
+if is_unittest_results "$line"
+then
+    fail=$(echo $line | grep -o F |wc -l)
+    pass=$(echo $line | grep -o "\." |wc -l)
+    total=$(($fail + $pass))
+    if [ "$fail" -gt "0" ]
     then
-        fail=$(echo $line | grep -o F |wc -l)
-        pass=$(echo $line | grep -o "\." |wc -l)
-        total=$(($fail + $pass))
-        if [ "$fail" -gt "0" ]
-        then
-            text="FAIL $(pwd) $input $output $ret $fail $pass $total"
-        else
-            text="PASS $(pwd) $input $output $ret $fail $pass $total"
-        fi
+        text="FAIL $(pwd) $input $output $ret $fail $pass $total"
     else
-        if [ "$ret" -eq 143 ]
+        text="PASS $(pwd) $input $output $ret $fail $pass $total"
+    fi
+else
+    if [ "$ret" -eq 143 ]
+    then
+        text="TOUT $(pwd) $input $output"
+    else
+        if cat $output | grep "^Ran 0 tests" &>/dev/null
         then
-            text="TOUT $(pwd) $input $output"
+            text="NOOP $(pwd) $input $output $ret"
         else
-            if cat $output | grep "^Ran 0 tests" &>/dev/null
-            then
-                text="NOOP $(pwd) $input $output $ret"
-            else
-                text="WHAT $(pwd) $input $output $ret"
-            fi
+            text="WHAT $(pwd) $input $output $ret"
         fi
     fi
 fi
 
+#cat "$output"
 echo "$text"
-exit $result
+exit $ret
