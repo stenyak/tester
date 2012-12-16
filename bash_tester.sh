@@ -5,17 +5,15 @@
 if [ "$OSTYPE" == "darwin10.0"  ]; then platform="osx"; fi
 if [ "$OSTYPE" == "msys"        ]; then platform="win"; fi
 if [ "$OSTYPE" == "linux-gnu"   ]; then platform="lin"; fi
-function path_file()
+function real_path()
 {
     if [ "$platform" == "lin" ]; then readlink -f "$1"
     else echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
     fi
 }
-function get_relative_path()
+function realtive_path()
 {
-    if [ "$platform" == "lin" ]; then python -c "import os.path; print os.path.relpath('$(path_file "$1")', '$PWD')"
-    else echo "$1"
-    fi
+    python -c "import os.path; print os.path.relpath('$(real_path "$1")', '$PWD')"
 }
 function tmp_file()
 {
@@ -26,8 +24,7 @@ function tmp_file()
     touch "$result"
     echo "$result"
 }
-input="$(get_relative_path $1)"
-input="$(path_file $1)"
+input="$(realtive_path $1)"
 output="$(tmp_file)"
 tp="/home/visual/venom/src/build/venom/timeout.sh"
 
@@ -56,7 +53,7 @@ then
     text="WHAT $(pwd) $input $output $ret"
 else
     input_tmp="$input.tmp"
-    tools="$(path_file bash_tester_tools.sh)"
+    tools="$(real_path bash_tester_tools.sh)"
     cat "$input" | sed "1 s%^.*$%source $tools $input%g" > "$input_tmp"
     if ! test -f "$tp"
     then
