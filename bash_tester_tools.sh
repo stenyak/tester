@@ -2,10 +2,10 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
+btt_filename="$1"; shift
 btt_results=""
 btt_test_ret=0
 btt_lastline=0
-btt_filename="$1"
 function btt_print_results()
 {
     if [ "$btt_results" == "" ]
@@ -18,10 +18,10 @@ function btt_print_results()
 }
 function btt_fail ()
 {
-    local ret=$1 # error status
-    local funcname="$3"
+    local ret=$1; shift # error status
+    local command="$1"; shift
+    local funcname="$1"; shift
     local line=$btt_lastline # LINENO
-    local command="$2"
     if [ "$funcname" != "" ]
     then
         local lastlineno=${BASH_LINENO[0]}
@@ -46,9 +46,9 @@ function btt_fail ()
 }
 function btt_debug ()
 {
-    local ret=$1 # error status
-    local line=$2 # LINENO
-    local cmd="$3"
+    local ret=$1; shift # error status
+    local line=$1; shift # LINENO
+    local cmd="$1"; shift
     if echo "$cmd" | grep btt_debug &>/dev/null; then return; fi
     if [ "$ret" -eq 0 ]
     then
