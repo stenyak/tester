@@ -89,6 +89,9 @@ function run_test()
         $tp -t $timeout "$test_interpreter" "$input" &> "$output"
     fi
     ret="$?"
+    if [ "$test_interpreter" == "bash" ]; then
+        rm -f "$input"
+    fi
     return "$ret"
 }
 input="$1"; shift
