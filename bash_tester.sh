@@ -2,13 +2,33 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
+if [ "$OSTYPE" == "darwin10.0"  ]; then platform="osx"; fi
+if [ "$OSTYPE" == "msys"        ]; then platform="win"; fi
+if [ "$OSTYPE" == "linux-gnu"   ]; then platform="lin"; fi
+function path_file()
+{
+    if [ "$platform" == "lin" ]; then readlink -f "$1"
+    else echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
 function get_relative_path()
 {
-    python -c "import os.path; print os.path.relpath('$(readlink -f $1)', '$PWD')"
+    if [ "$platform" == "lin" ]; then python -c "import os.path; print os.path.relpath('$(path_file "$1")', '$PWD')"
+    else echo "$1"
+    fi
+}
+function tmp_file()
+{
+    local result=""
+    if [ "$platform" == "lin" ]; then result="$(tempfile)"
+    else result="$(mktemp -t "$0")"
+    fi
+    touch "$result"
+    echo "$result"
 }
 input="$(get_relative_path $1)"
-input="$(readlink -f $1)"
-output="$(tempfile)"
+input="$(path_file $1)"
+output="$(tmp_file)"
 tp="/home/visual/venom/src/build/venom/timeout.sh"
 
 function is_bashtest()
@@ -19,12 +39,12 @@ function is_bashtest()
 
 if ! is_bashtest "$input"
 then
-    echo "Error: in order to work, insert a shebang line at the beginning of $input" > $output
+    echo "Error: in order to work, insert a shebang line at the beginning of $input" > "$output"
     ret=1
     text="WHAT $(pwd) $input $output $ret"
 else
     input_tmp="$input.tmp"
-    tools="$(readlink -f bash_tester_tools.sh)"
+    tools="$(path_file bash_tester_tools.sh)"
     cat "$input" | sed "1 s%^.*$%source $tools $input_tmp%g" > "$input_tmp"
     $tp -t 1 bash "$input_tmp" &> "$output"
     ret=$?
