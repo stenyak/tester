@@ -94,7 +94,13 @@ function run_test()
     fi
     return "$ret"
 }
-input="$1"; shift
+verbose=false
+for arg
+do
+    if [ "$arg" == "-v" ]; then verbose=true
+    else input="$arg"
+    fi
+done
 input="$(relative_path $input)"
 output="$(tmp_file)"
 tp="/home/visual/venom/src/build/venom/timeout.sh"
@@ -138,6 +144,9 @@ else
     fi
 fi
 
-#cat "$output"
+if $verbose
+then
+    cat "$output"
+fi
 echo "$text"
 exit $ret
