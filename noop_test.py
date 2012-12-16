@@ -1,4 +1,4 @@
-#!python_tester.sh
+#!/usr/bin/env python
 import unittest
 
 class TestFail(unittest.TestCase):

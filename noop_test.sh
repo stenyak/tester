@@ -1,1 +1,1 @@
-#!bash_tester.sh
+#!/bin/bash

@@ -1,2 +1,2 @@
-#!bash_tester.sh
+#!/bin/bash
 sleep 2s

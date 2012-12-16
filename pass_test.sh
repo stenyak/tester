@@ -1,4 +1,4 @@
-#!bash_tester.sh
+#!/bin/bash
 function foo ()
 {
     true
