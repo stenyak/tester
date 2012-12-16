@@ -36,6 +36,18 @@ function is_bashtest()
     head -n 1 "$input" |grep '^#!.*\(bash\|bash_tester\)' &>/dev/null
     #should be a bash or bash_tester script with a shebang
 }
+function is_unittest_results()
+{
+    #unittest results line looks like: FFFF..F.F.FF..F
+    if [ "$line" == "" ]
+    then
+        #empty first line, not a results line
+        false
+    else
+        #if first line has anything other than 'F' and '.' its not a results line
+        echo "$1" | grep -v "[^F\.]" &>/dev/null
+    fi
+}
 
 if ! is_bashtest "$input"
 then
@@ -56,7 +68,7 @@ else
     ret=$?
 
     line=$(cat $output | tail -1)
-    if is_bashtest "$input"
+    if is_bashtest "$input" && is_unittest_results "$line"
     then
         #unittests
         fail=$(echo $line | grep -o F |wc -l)
