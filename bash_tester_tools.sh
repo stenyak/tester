@@ -4,7 +4,7 @@
 
 btt_filename="$1"; shift
 btt_results=""
-btt_test_ret=0
+btt_test_ret=1
 btt_lastline=0
 function btt_print_results()
 {
