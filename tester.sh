@@ -77,7 +77,7 @@ function run_test()
     local timeout=1
     local ret=1
     local command="$test_interpreter"
-    test "$test_interpreter" == "bash" && command="./bash_tester_tools.sh"
+    test "$test_interpreter" == "bash" && command="./bash_tester.sh"
     if ! test -f "$tp"
     then
         #echo "Error: helper timeout script not found: $tp"
