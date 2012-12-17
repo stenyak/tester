@@ -2,12 +2,6 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
-function die()
-{
-    local message="$1"; shift
-    echo "$message"
-    exit 1
-}
 function real_path()
 {
     local path="$1"; shift
@@ -27,28 +21,20 @@ function tmp_file()
     touch "$result"
     echo "$result"
 }
+function check_extension()
+{
+    local input="$1"; shift
+    if ! echo "$input" |grep "\.\(sh\|py\)$" &>/dev/null
+    then
+        echo "Only .sh and .py files are supported: $input"
+        exit 2
+    fi
+}
 function get_interpreter()
 {
     local input="$1"; shift
-    local result=""
-    head -n 1 "$input" |grep "^#!..*" &>/dev/null || die "Script has to start with a shebang line"
-    if echo "$input" |grep "\.sh$" &>/dev/null; then result="bash"
-    elif echo "$input" |grep "\.py$" &>/dev/null; then result="python"
-    else die "Only .sh and .py files are supported: $input"
-    fi
-    head -n 1 "$input" |grep "$result" &>/dev/null || die "File extension and shebang combination not supported: $input"
-    echo "$result"
-}
-function get_results_line()
-{
-    local test_interpreter="$1"; shift
-    local output="$1"; shift
-    if [ "$test_interpreter" == "bash" ]; then
-        cat "$output" | tail -1
-    elif [ "$test_interpreter" == "python" ]; then
-        cat "$output" | head -1
-    else
-        die "Unknown type of test: $test_interpreter"
+    if echo "$input" |grep "\.py$" &>/dev/null; then echo "python"
+    else echo "./bash_tester.sh"
     fi
 }
 function is_unittest_results()
@@ -66,13 +52,11 @@ function is_unittest_results()
 }
 function run_test()
 {
-    local test_interpreter="$1"; shift
     local input="$1"; shift
     local output="$1"; shift
     local timeout=1
     local ret=1
-    local command="$test_interpreter"
-    test "$test_interpreter" == "bash" && command="./bash_tester.sh"
+    local command="$(get_interpreter "$input")"
     if ! test -f "$tp"
     then
         #echo "Error: helper timeout script not found: $tp"
@@ -94,24 +78,15 @@ input="$(relative_path $input)"
 output="$(tmp_file)"
 tp="/home/visual/venom/src/build/venom/timeout.sh"
 
-test_interpreter="$(get_interpreter "$input")"
-ret="$?"
-if [ "$ret" -ne 0 ]
-then
-    echo "Shebang line, file extension, or interpreter are not correct. ($test_interpreter)" > "$output"
-    echo "WHAT $(pwd) $input $output $ret"
-    exit $ret
-fi
-
-
-run_test "$test_interpreter" "$input" "$output"
+check_extension "$input"
+run_test "$input" "$output"
 ret=$?
 
-line="$(get_results_line "$test_interpreter" "$output")"
+line="$(head -n 1 "$output")"
 if is_unittest_results "$line"
 then
     fail=$(echo $line | grep -o F |wc -l)
-    pass=$(echo $line | grep -o "\." |wc -l)
+    pass=$(check_extension $line | grep -o "\." |wc -l)
     total=$(($fail + $pass))
     if [ "$fail" -gt "0" ]
     then

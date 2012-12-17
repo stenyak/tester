@@ -4,23 +4,60 @@
 
 test "$_" == "$0" && btt_sourced=false || btt_sourced=true #is it run directly in subshell, or sourced?
 
+function tmp_file()
+{
+    local result=""
+    if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile)"
+    else result="$(mktemp -t "$0")"; fi
+    touch "$result"
+    echo "$result"
+}
 btt_filename="$1"; shift
+btt_output="$(tmp_file)"
 btt_results=""
 btt_test_ret=1
 btt_lastline=0
 
 if ! $btt_sourced
 then
+    if ! head -n 1 "$btt_filename" | grep "^#!..*" &>/dev/null; then 
+        echo "Script has to start with a shebang line"
+        exit 2
+    fi
     cat "$btt_filename" | sed "1 s%^.*$%source $0 $btt_filename%g" > "$btt_filename.tmp"
     bash "$btt_filename.tmp" "$@"
     btt_test_ret=$?
     rm -f "$btt_filename.tmp"
     exit $btt_test_ret
 fi
+
+#temporarily redirect err and out to file, backing up stderr and stdout descriptors meanwhile
+exec 4<&1 #stdout
+exec 5<&2 #stderr
+exec > "$btt_output" 2>&1
+
 function btt_print_results()
 {
-    echo "${btt_results:-Ran 0 tests}"
+    #restore stdout and stderr descriptors, allowing to output stuff normally
+    exec 1<&4
+    exec 2<&5
+    echo "$btt_results"
+    cat "$btt_output"
+    echo "Ran $(echo $btt_results | wc -m) tests"
+    echo ""
+    local failed="$(echo $btt_results | grep -o "F" |wc -l)"
+    if [ "$failed" -gt 0 ]
+    then
+        echo "FAILED (failures=$failed)"
+    else
+        echo "OK"
+    fi
     exit $btt_test_ret
+}
+function get_line ()
+{
+    local lineno="$1"; shift
+    cat $0 |head -n $lineno |tail -n 1 |sed "s/^\s*//g;s/\s*$//g"
 }
 function btt_fail ()
 {
@@ -28,27 +65,25 @@ function btt_fail ()
     local command="$1"; shift
     local funcname="$1"; shift
     local line=$btt_lastline # LINENO
+    echo "======================================================================"
     if [ "$funcname" != "" ]
     then
         local lastlineno=${BASH_LINENO[0]}
         local linenos=("${BASH_LINENO[@]}")
         unset linenos[0]
-        command="$(cat $0 |head -n $lastlineno |tail -n 1 |sed "s/^\s*//g;")"
-        echo "$btt_filename:$lastlineno: error $ret returned by command: '$command'"
+        echo "FAIL: $btt_filename:$lastlineno: error $ret returned by command: '$(get_line $lastlineno)'"
         for lno in ${linenos[@]}
         do
             if [ "$lno" -ne "0" ]
             then
-                command="$(cat $0 |head -n $lno |tail -n 1 |sed "s/^\s*//g;")"
-                echo "   called from line $lno: '$command'"
+                echo "   called from line $lno: '$(get_line $lno)'"
             fi
         done
-        echo ""
     else
-        command="$(cat $0 |head -n $line |tail -n 1)"
-        echo "$btt_filename:$line: error $ret returned by command: '$command'"
-        echo ""
+        echo "FAIL: $btt_filename:$line: error $ret returned by command: '$(get_line $line)'"
     fi
+    echo "----------------------------------------------------------------------"
+    echo ""
 }
 function btt_debug ()
 {
