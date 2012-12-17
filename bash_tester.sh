@@ -8,7 +8,7 @@ function tmp_file()
 {
     local result=""
     if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile)"
-    else result="$(mktemp -t "$0")"; fi
+    else result="$(mktemp -t "$RANDOM")"; fi
     touch "$result"
     echo "$result"
 }
