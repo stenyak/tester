@@ -51,6 +51,7 @@ function btt_print_results()
     then
         echo "FAILED (failures=$failed)"
     else
+        btt_test_ret=0
         echo "OK"
     fi
     exit $btt_test_ret
