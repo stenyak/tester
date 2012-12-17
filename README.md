@@ -19,6 +19,7 @@ Sample demonstration:
     true
     true
     false
+and
 
     $ cat my_python_test.py
     #!/usr/bin/env python
@@ -36,17 +37,30 @@ Sample demonstration:
 None of those scripts have anything out of the ordinary, but Tester can run and output same test information for both:
 
     $ ./tester.sh my_bash_test.sh
-    FAIL /home/foo/tests my_bash_test.sh /tmp/output.jTBO2QzR 1 1 2 3
+    FAIL /home/foo/tester examples/my_bash_test.sh /tmp/tmp.lEB5c8ullQ 1 1 4 5
+and
 
     $ ./tester.sh my_python_test.py
-    FAIL /home/foo/tests my_python_test.py /tmp/output.HaFe9NaJ 1 1 2 3
+    FAIL /home/foo/tester examples/my_python_test.py /tmp/tmp.Swh6bmrOct 1 1 2 3
 
 You can also get more detailed execution information using the `-v` flag:
 
     $ ./tester.sh my_bash_test.sh -v
-    my_bash_test.sh:4: error 1 returned by command: 'false'
-    ..F
-    FAIL /home/foo/tests my_bash_test.sh /tmp/output.jTBO2QzR 1 1 2 3
+    ....F
+    ======================================================================
+    FAIL: examples/my_bash_test.sh (line 4)
+    ----------------------------------------------------------------------
+    Traceback (most recent call last):
+      File "examples/my_bash_test.sh", line 4
+        false
+    Exit status error: Expected 0, but got 1
+
+    ----------------------------------------------------------------------
+    Ran 5 tests
+
+    FAILED (failures=1)
+    FAIL /home/foo/tester examples/my_bash_test.sh /tmp/tmp.lEB5c8ullQ 1 1 4 5
+and
 
     $ ./tester.sh my_python_test.py -v
     ..F
@@ -54,13 +68,15 @@ You can also get more detailed execution information using the `-v` flag:
     FAIL: testC (__main__.Test)
     ----------------------------------------------------------------------
     Traceback (most recent call last):
-      File "my_python_test.py", line 9, in testC
+      File "examples/my_python_test.py", line 9, in testC
         self.assertTrue(False)
-    AssertionError
+    AssertionError: False is not true
+
     ----------------------------------------------------------------------
     Ran 3 tests in 0.000s
+
     FAILED (failures=1)
-    FAIL /home/foo/tests my_python_test.py /tmp/output.HaFe9NaJ 1 1 2 3
+    FAIL /home/foo/tester examples/my_python_test.py /tmp/tmp.Swh6bmrOct 1 1 2 3
 
 
 ### Contributing
