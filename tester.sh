@@ -85,8 +85,8 @@ ret=$?
 line="$(head -n 1 "$output")"
 if is_unittest_results "$line"
 then
-    fail=$(echo $line | grep -o F |wc -l)
-    pass=$(check_extension $line | grep -o "\." |wc -l)
+    fail=$(echo "$line" | grep -o "F" |wc -l)
+    pass=$(echo "$line" | grep -o "\." |wc -l)
     total=$(($fail + $pass))
     if [ "$fail" -gt "0" ]
     then
