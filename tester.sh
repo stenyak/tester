@@ -2,9 +2,6 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
-if [ "$OSTYPE" == "darwin10.0"  ]; then platform="osx"; fi
-if [ "$OSTYPE" == "msys"        ]; then platform="win"; fi
-if [ "$OSTYPE" == "linux-gnu"   ]; then platform="lin"; fi
 function die()
 {
     local message="$1"; shift
@@ -14,9 +11,8 @@ function die()
 function real_path()
 {
     local path="$1"; shift
-    if [ "$platform" == "lin" ]; then readlink -f "$path"
-    else echo "$(cd "$(dirname "$path")"; pwd)/$(basename "$path")"
-    fi
+    if [ "$OSTYPE" == "linux-gnu" ]; then readlink -f "$path"
+    else echo "$(cd "$(dirname "$path")"; pwd)/$(basename "$path")"; fi
 }
 function relative_path()
 {
@@ -26,9 +22,8 @@ function relative_path()
 function tmp_file()
 {
     local result=""
-    if [ "$platform" == "lin" ]; then result="$(tempfile)"
-    else result="$(mktemp -t "$0")"
-    fi
+    if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile)"
+    else result="$(mktemp -t "$0")"; fi
     touch "$result"
     echo "$result"
 }
