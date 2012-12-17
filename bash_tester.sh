@@ -44,9 +44,9 @@ function btt_print_results()
     echo "$btt_results"
     cat "$btt_output"
     echo "----------------------------------------------------------------------"
-    echo "Ran $(echo $btt_results | grep -o "." | wc -l) tests"
+    echo "Ran $(echo $btt_results | grep -o "." | wc -l |sed "s/\ *//g") tests"
     echo ""
-    local failed="$(echo $btt_results | grep -o "F" |wc -l)"
+    local failed="$(echo $btt_results | grep -o "F" |wc -l |sed "s/\ *//g")"
     if [ "$failed" -gt 0 ]
     then
         echo "FAILED (failures=$failed)"
