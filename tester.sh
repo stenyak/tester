@@ -76,22 +76,16 @@ function run_test()
     local output="$1"; shift
     local timeout=1
     local ret=1
-    if [ "$test_interpreter" == "bash" ]; then
-        local tools="$(real_path bash_tester_tools.sh)"
-        cat "$input" | sed "1 s%^.*$%source $tools $input%g" > "$input.tmp"
-        input="$input.tmp"
-    fi
+    local command="$test_interpreter"
+    test "$test_interpreter" == "bash" && command="./bash_tester_tools.sh"
     if ! test -f "$tp"
     then
         #echo "Error: helper timeout script not found: $tp"
-        "$test_interpreter" "$input" &> "$output"
+        "$command" "$input" &> "$output"
     else
-        $tp -t $timeout "$test_interpreter" "$input" &> "$output"
+        $tp -t $timeout "$command" "$input" &> "$output"
     fi
     ret="$?"
-    if [ "$test_interpreter" == "bash" ]; then
-        rm -f "$input"
-    fi
     return "$ret"
 }
 verbose=false

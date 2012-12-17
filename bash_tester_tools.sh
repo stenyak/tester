@@ -2,10 +2,21 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
+test "$_" == "$0" && btt_sourced=false || btt_sourced=true #is it run directly in subshell, or sourced?
+
 btt_filename="$1"; shift
 btt_results=""
 btt_test_ret=1
 btt_lastline=0
+
+if ! $btt_sourced
+then
+    cat "$btt_filename" | sed "1 s%^.*$%source $0 $btt_filename%g" > "$btt_filename.tmp"
+    bash "$btt_filename.tmp" "$@"
+    btt_test_ret=$?
+    rm -f "$btt_filename.tmp"
+    exit $btt_test_ret
+fi
 function btt_print_results()
 {
     echo "${btt_results:-Ran 0 tests}"
