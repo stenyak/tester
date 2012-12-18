@@ -46,7 +46,7 @@ function reason_to_text()
 {
     local reason="$1"; shift
     local reason_text=""
-    case $reason in
+    case "$reason" in
        "PASS")
         reason_text="all tests passed"
     ;; "FAIL")
@@ -70,15 +70,31 @@ function tmp_file()
     touch "$result"
     echo "$result"
 }
+function real_path()
+{
+    local path="$1"; shift
+    if [ "$OSTYPE" == "linux-gnu" ]; then readlink -f "$path"
+    else echo "$(cd "$(dirname "$path")"; pwd)/$(basename "$path")"; fi
+}
+function relative_path()
+{
+    local path="$1"; shift
+    echo "$(python -c "import os.path; print os.path.relpath('$(real_path "$path")', '$PWD')")"
+}
 function run_test()
 {
     local file="$1"; shift
+    echo -ne "== Running $(relative_path "$file") : \t" |expand -t 63
+    local tester_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/tester.sh"
+    if ! test -f "$tester_path"; then echo "Error: helper timeout script not found at $tester_path"; exit 1; fi
 
-    echo -ne "== Running $file : \t" |expand -t 63
     local temp_output="$(tmp_file)"  #test is not run in a $() subshell, otherwise the timeout script in tester.sh won't work
+    pushd "$(dirname "$file")" &>/dev/null
+    local relative_file="$(relative_path "$file")"
     local now="$(date +%s%N)"                   #start the clock
-    ./tester.sh "$file" >"$temp_output"         #actually run the test
+    $tester_path "$relative_file" >"$temp_output"         #actually run the test
     local elapsed_ns="$(($(date +%s%N)-$now))"  #stop the clock
+    popd &>/dev/null
     local info="$(cat "$temp_output"; rm -f "$temp_output")"
 
     local elapsed="$(echo "scale=2; $elapsed_ns / 1000000000" | bc | sed "s/^\./0./")"  # seconds w/ decimals
@@ -102,7 +118,7 @@ function run_test()
             echo -e "   passed${RESET} $pass/$total in ${elapsed}s"
     else
         echo -ne "${DRED}"
-        case $reason in
+        case "$reason" in
            "FAIL")
             echo -e "   failed${RESET} $fail/$total in ${elapsed}s"
         ;; "TOUT")
@@ -172,11 +188,12 @@ function run_tests()
     local IFS=$'\n'
     for file in $files
     do
+        file="$(real_path "$file")"
         run_test "$file"
         ret=$?
         result=$(($result+$ret))
     done
-    return $result
+    return "$result"
 }
 
 
@@ -206,7 +223,7 @@ function main()
     local elapsed="$(echo "scale=2; $(($(date +%s%N)-$now)) / 1000000000" | bc | sed "s/^\./0./")"  # seconds w/ decimals
     echo ""
     show_results "$ret" "$nicetester_fail" "$nicetester_total" "$elapsed"
-    return $ret
+    return "$ret"
 }
 
 main "$@"

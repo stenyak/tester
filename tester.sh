@@ -2,17 +2,6 @@
 # Copyright 2012 Bruno Gonzalez
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
-function real_path()
-{
-    local path="$1"; shift
-    if [ "$OSTYPE" == "linux-gnu" ]; then readlink -f "$path"
-    else echo "$(cd "$(dirname "$path")"; pwd)/$(basename "$path")"; fi
-}
-function relative_path()
-{
-    local path="$1"; shift
-    python -c "import os.path; print os.path.relpath('$(real_path "$path")', '$PWD')"
-}
 function tmp_file()
 {
     local result=""
@@ -30,14 +19,15 @@ function check_extension()
         local ret=2
         echo "Only .sh and .py files are supported: $input" > "$output"
         echo "WHAT $(pwd) $input $output $ret"
-        exit $ret
+        exit "$ret"
     fi
 }
 function get_interpreter()
 {
     local input="$1"; shift
+    local bash_tester_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/bash_tester.sh"
     if echo "$input" |grep "\.py$" &>/dev/null; then echo "python"
-    else echo "./bash_tester.sh"
+    else echo "$bash_tester_path"
     fi
 }
 function is_unittest_results()
@@ -60,17 +50,15 @@ function run_test()
     local timeout=1
     local ret=1
     local command="$(get_interpreter "$input")"
-    local tp="/home/visual/venom/src/build/venom/timeout.sh"
-    if ! test -f "$tp"
+    local timeout_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/timeout.sh"
+    if ! test -f "$timeout_path"
     then
-        #echo "Error: helper timeout script not found: $tp"
-        "$command" "$input" &> "$output"
-        ret="$?"
+        echo "Error: helper timeout script not found at $timeout_path" &> "$output"
     else
         exec 4<&1 #stdout
         exec 5<&2 #stderr
         exec > /dev/null 2>&1
-        $tp -d 0 -t $timeout bash -c "$command $input &> $output"
+        "$timeout_path" -t "$timeout" bash -c "$command '$input' &> '$output'"
         ret="$?"
         exec 1<&4
         exec 2<&5
@@ -84,7 +72,6 @@ do
     else input="$arg"
     fi
 done
-input="$(relative_path $input)"
 output="$(tmp_file)"
 
 check_extension "$input" "$output"
@@ -108,7 +95,7 @@ else
     then
         text="TOUT $(pwd) $input $output"
     else
-        if cat $output | grep "^Ran 0 tests" &>/dev/null
+        if cat "$output" | grep "^Ran 0 tests" &>/dev/null
         then
             text="NOOP $(pwd) $input $output $ret"
         else
@@ -122,4 +109,4 @@ then
     cat "$output"
 fi
 echo "$text"
-exit $ret
+exit "$ret"
