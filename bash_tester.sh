@@ -20,8 +20,8 @@ btt_lastline=0
 
 if ! $btt_sourced
 then
-    if ! head -n 1 "$btt_filename" | grep "^#!..*" &>/dev/null; then 
-        echo "Script has to start with a shebang line"
+    if ! head -n 1 "$btt_filename" | grep "^#!.*bash" &>/dev/null; then 
+        echo "Script has to start with a bash shebang line"
         exit 2
     fi
     cat "$btt_filename" | sed "1 s%^.*$%source $0 $btt_filename%g" > "$btt_filename.tmp"
