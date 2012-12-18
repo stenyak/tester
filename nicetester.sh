@@ -38,16 +38,41 @@ function find_files()
         then
             files="$files\n"
         fi
-        files="$files$(sh -c "find '$dir' $filters" 2>/dev/null)"
+        files="$files$(sh -c "find '$dir' $filters; printf '\n'" 2>/dev/null)"
     done
-    printf "$files\n" |grep -v "^$"
+    printf "\n$files\n" | sort
+}
+function reason_to_text()
+{
+    local reason="$1"; shift
+    local reason_text=""
+    case $reason in
+       "PASS")
+        reason_text="all tests passed"
+    ;; "FAIL")
+        reason_text="some tests failed"
+    ;; "TOUT")
+        reason_text="timed out while running tests"
+    ;; "WHAT")
+        reason_text="incorrect test format"
+    ;; "NOOP")
+        reason_text="no tests were defined"
+    ;; *)
+        reason_text="unknown reason"
+    ;; esac
+    echo "$reason_text"
 }
 function run_test()
 {
     local file="$1"; shift
-    local info=$(./tester.sh "$file")
 
-    local status="$(echo $info | awk '{print $1}')"
+    echo -ne "== Running $file : \t" |expand -t 65
+    local now="$(date +%s%N)"                   #start the clock
+    local info=$(./tester.sh "$file")           #actually run the test
+    local elapsed_ns="$(($(date +%s%N)-$now))"  #stop the clock
+    local elapsed="$(echo "scale=2; $elapsed_ns / 1000000000" | bc | sed "s/^\./0./")"  # seconds w/ decimals
+
+    local reason="$(echo $info | awk '{print $1}')"
     local dir="$(echo $info | awk '{print $2}')"
     local input="$(echo $info | awk '{print $3}')"
     local output="$(echo $info | awk '{print $4}')"
@@ -55,21 +80,68 @@ function run_test()
     local fail="$(echo $info | awk '{print $6}')"
     local pass="$(echo $info | awk '{print $7}')"
     local total="$(echo $info | awk '{print $8}')"
+    fail=${fail:-0}
+    pass=${pass:-0}
+    total=${total:-0}
 
-    local GREEN="\033[01;32m"
-    local YELLOW="\033[01;33m"
-    local RESET="\033[00m"
-    local RED="\033[01;31m"
-
-    if [ "$status" == "PASS" ]
+    local result=0
+    if [ "$reason" == "PASS" ]
     then
-        echo -e "-- ${GREEN}PASS${RESET} $file"
+        echo -e "${DGREEN}passed $pass/$total${RESET} in ${elapsed}s"
     else
-        echo -e "-- ${RED}FAIL${RESET} $file"
+        if [ "$reason" == "NOOP" ]
+        then
+            echo -e "${DRED}empty  $fail/$total${RESET} in ${elapsed}s"
+        else
+            echo -e "${DRED}failed $fail/$total${RESET} in ${elapsed}s"
+        fi
+        result="$(($result+1))"
         if $verbose
         then
-            echo $info
-            cat "$output" |tail -n 5
+            local nlines=50
+            echo -e "\t${DRED}Return code:${RESET} $ret\t\t${DRED}Working dir:${RESET} $dir"
+            echo -e "\t${DRED}Reason:${RESET} $(reason_to_text "$reason")"
+            echo -e "\t${DRED}Output:${RESET}  (only showing last $nlines lines, full output at $output )${RESET}:"
+            cat "$output" | tail -n "$nlines" |sed "s/^/\t\t/g"
+            #echo -e "\t${DRED}Full status:${RESET} $info"
+            #echo -e "--${DRED}fail $(basename $input)${RESET}"
+        fi
+    fi
+    nicetester_pass="$(($nicetester_pass+$pass))"
+    nicetester_fail="$(($nicetester_fail+$fail))"
+    nicetester_total="$(($nicetester_total+$total))"
+    return "$result"
+}
+function show_results
+{
+    local ret="$1"; shift
+    local fail="$1"; shift
+    local total="$1"; shift
+    local elapsed="$1"; shift
+
+    echo "($total tests run in ${elapsed}s)"
+    if [ "$total" -eq "0" ]
+    then
+        echo -e "${YELLOW}WARNING! No tests were found.$RESET"
+        echo -e "${DYELLOW} Get to work and write some tests!$RESET"
+    else
+        if [ "$fail" -eq "0" -a "$ret" -eq "0" ]
+        then
+            echo -e "${GREEN}CONGRATULATIONS! ALL $total TESTS PASSED.$RESET"
+            echo -e "$DGREEN Here, have a cookie!$RESET"
+            echo -e "$DYELLOW    ____     $RESET"
+            echo -e "$DYELLOW   /· . \    $RESET"
+            echo -e "$DYELLOW   | . '|    $RESET"
+            echo -e "$DYELLOW   \____/    $RESET"
+        else
+            if [ "$fail" -eq "0" ]
+            then
+                echo -e "${YELLOW}WARNING! Some file has no tests.$RESET"
+                echo -e "${DYELLOW} Get to work and write those tests!$RESET"
+            else
+                echo -e "${RED}EPIC FAIL. $fail tests failed (out of $total)."
+                echo -e "${DRED} No cookies for you!$RESET"
+            fi
         fi
     fi
 }
@@ -87,9 +159,34 @@ function run_tests()
     return $result
 }
 
-echo -n "Finding candidate tests..."
-files="$(find_files "$@")"
-nfiles="$((echo; printf "$files") |wc -l |sed "s/ *//g")"
-echo " $nfiles files found."
-run_tests "$files"
-echo "Total return is $?"
+
+function main()
+{
+    local GREEN="\033[01;32m"
+    local DGREEN="\033[00;32m"
+    local YELLOW="\033[01;33m"
+    local DYELLOW="\033[00;33m"
+    local RESET="\033[00m"
+    local RED="\033[01;31m"
+    local DRED="\033[00;31m"
+    local BLUE="\033[01;34m"
+    local WHITE="\033[01;37m"
+
+    local nicetester_pass=0
+    local nicetester_fail=0
+    local nicetester_total=0
+
+    echo -n "Finding candidate tests..."
+    files="$(find_files "$@")"
+    nfiles="$((printf "$files") |wc -l |sed "s/ *//g")"
+    echo " $nfiles files found."
+    local now="$(date +%s%N)"                   #start the clock
+    run_tests "$files"
+    local ret="$?"
+    local elapsed="$(echo "scale=2; $(($(date +%s%N)-$now)) / 1000000000" | bc | sed "s/^\./0./")"  # seconds w/ decimals
+    echo ""
+    show_results "$ret" "$nicetester_fail" "$nicetester_total" "$elapsed"
+    return $ret
+}
+
+main "$@"
