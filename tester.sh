@@ -24,10 +24,13 @@ function tmp_file()
 function check_extension()
 {
     local input="$1"; shift
+    local output="$1"; shift
     if ! echo "$input" |grep "\.\(sh\|py\)$" &>/dev/null
     then
-        echo "Only .sh and .py files are supported: $input"
-        exit 2
+        local ret=2
+        echo "Only .sh and .py files are supported: $input" > "$output"
+        echo "WHAT $(pwd) $input $output $ret"
+        exit $ret
     fi
 }
 function get_interpreter()
@@ -78,7 +81,7 @@ input="$(relative_path $input)"
 output="$(tmp_file)"
 tp="/home/visual/venom/src/build/venom/timeout.sh"
 
-check_extension "$input"
+check_extension "$input" "$output"
 run_test "$input" "$output"
 ret=$?
 
