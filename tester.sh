@@ -60,14 +60,21 @@ function run_test()
     local timeout=1
     local ret=1
     local command="$(get_interpreter "$input")"
+    local tp="/home/visual/venom/src/build/venom/timeout.sh"
     if ! test -f "$tp"
     then
         #echo "Error: helper timeout script not found: $tp"
         "$command" "$input" &> "$output"
+        ret="$?"
     else
-        $tp -t $timeout "$command" "$input" &> "$output"
+        exec 4<&1 #stdout
+        exec 5<&2 #stderr
+        exec > /dev/null 2>&1
+        $tp -d 0 -t $timeout bash -c "$command $input &> $output"
+        ret="$?"
+        exec 1<&4
+        exec 2<&5
     fi
-    ret="$?"
     return "$ret"
 }
 verbose=false
@@ -79,7 +86,6 @@ do
 done
 input="$(relative_path $input)"
 output="$(tmp_file)"
-tp="/home/visual/venom/src/build/venom/timeout.sh"
 
 check_extension "$input" "$output"
 run_test "$input" "$output"

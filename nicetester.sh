@@ -62,14 +62,25 @@ function reason_to_text()
     ;; esac
     echo "$reason_text"
 }
+function tmp_file()
+{
+    local result=""
+    if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile)"
+    else result="$(mktemp -t "$RANDOM")"; fi
+    touch "$result"
+    echo "$result"
+}
 function run_test()
 {
     local file="$1"; shift
 
-    echo -ne "== Running $file : \t" |expand -t 65
+    echo -ne "== Running $file : \t" |expand -t 63
+    local temp_output="$(tmp_file)"  #test is not run in a $() subshell, otherwise the timeout script in tester.sh won't work
     local now="$(date +%s%N)"                   #start the clock
-    local info=$(./tester.sh "$file")           #actually run the test
+    ./tester.sh "$file" >"$temp_output"         #actually run the test
     local elapsed_ns="$(($(date +%s%N)-$now))"  #stop the clock
+    local info="$(cat "$temp_output"; rm -f "$temp_output")"
+
     local elapsed="$(echo "scale=2; $elapsed_ns / 1000000000" | bc | sed "s/^\./0./")"  # seconds w/ decimals
 
     local reason="$(echo $info | awk '{print $1}')"
@@ -87,24 +98,33 @@ function run_test()
     local result=0
     if [ "$reason" == "PASS" ]
     then
-        echo -e "${DGREEN}passed $pass/$total${RESET} in ${elapsed}s"
+        echo -ne "${DGREEN}"
+            echo -e "   passed${RESET} $pass/$total in ${elapsed}s"
     else
-        if [ "$reason" == "NOOP" ]
-        then
-            echo -e "${DRED}empty  $fail/$total${RESET} in ${elapsed}s"
-        else
-            echo -e "${DRED}failed $fail/$total${RESET} in ${elapsed}s"
-        fi
+        echo -ne "${DRED}"
+        case $reason in
+           "FAIL")
+            echo -e "   failed${RESET} $fail/$total in ${elapsed}s"
+        ;; "TOUT")
+            echo -e "timed out${RESET} $fail/$total in ${elapsed}s"
+        ;; "WHAT")
+            echo -e "  unknown${RESET} $fail/$total in ${elapsed}s"
+        ;; "NOOP")
+            echo -e "    empty${RESET} $fail/$total in ${elapsed}s"
+        ;; *)
+            reason_text="unknown reason"
+        ;; esac
         result="$(($result+1))"
+        local out="$DRED"
+        local DRED="$RESET"
         if $verbose
         then
             local nlines=50
             echo -e "\t${DRED}Return code:${RESET} $ret\t\t${DRED}Working dir:${RESET} $dir"
             echo -e "\t${DRED}Reason:${RESET} $(reason_to_text "$reason")"
-            echo -e "\t${DRED}Output:${RESET}  (only showing last $nlines lines, full output at $output )${RESET}:"
+            echo -e "\t${out}Output${RESET} (only showing last $nlines lines, full output at $output ):${RESET}"
             cat "$output" | tail -n "$nlines" |sed "s/^/\t\t/g"
             #echo -e "\t${DRED}Full status:${RESET} $info"
-            #echo -e "--${DRED}fail $(basename $input)${RESET}"
         fi
     fi
     nicetester_pass="$(($nicetester_pass+$pass))"
