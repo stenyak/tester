@@ -111,6 +111,7 @@ function run_test()
     fail=${fail:-0}
     pass=${pass:-0}
     total=${total:-0}
+    test -f "$output" || { printf "\nIncorrect output from tester.sh:\n$info\n" >&2; exit 2; }
 
     local result=0
     if [ "$reason" == "PASS" ]
