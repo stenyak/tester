@@ -123,16 +123,24 @@ function run_test()
         echo -ne "${DRED}"
         case "$reason" in
            "FAIL")
-            echo -e "   failed${RESET} $fail/$total in ${elapsed}s"
+            echo -ne "   failed"
         ;; "TOUT")
-            echo -e "timed out${RESET} $fail/$total in ${elapsed}s"
+            echo -ne "timed out"
         ;; "WHAT")
-            echo -e "  unknown${RESET} $fail/$total in ${elapsed}s"
+            echo -ne "  unknown"
         ;; "NOOP")
-            echo -e "    empty${RESET} $fail/$total in ${elapsed}s"
+            echo -ne "    empty"
         ;; *)
+            echo -ne "     huh?"
             reason_text="unknown reason"
         ;; esac
+        echo -ne "${RESET} $fail/$total in "
+        if [ "$elapsed_ns" -gt "${timeout_ms}000000" ]
+        then
+            echo -e "${DRED}${elapsed}s${RESET}"
+        else
+            echo -e "${elapsed}s"
+        fi
         result="$(($result+1))"
         local out="$DRED"
         local DRED="$RESET"
