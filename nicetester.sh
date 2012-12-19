@@ -66,8 +66,8 @@ function reason_to_text()
 function tmp_file()
 {
     local result=""
-    if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile)"
-    else result="$(mktemp -t "$RANDOM")"; fi
+    if [ "$OSTYPE" == "linux-gnu" ]; then result="$(tempfile -p "test.")"
+    else result="$(mktemp -t "test.")"; fi
     touch "$result"
     echo "$result"
 }
