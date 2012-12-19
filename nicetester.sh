@@ -3,6 +3,7 @@
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
 verbose=false
+timeout_ms=1000
 for arg; do if [ "$arg" == "-v" ]; then verbose=true; fi; done
 function find_files()
 {
@@ -92,7 +93,7 @@ function run_test()
     pushd "$(dirname "$file")" &>/dev/null
     local relative_file="$(relative_path "$file")"
     local now="$(date +%s%N)"                   #start the clock
-    $tester_path "$relative_file" >"$temp_output"         #actually run the test
+    $tester_path -t "$timeout_ms" "$relative_file" &> "$temp_output"         #actually run the test
     local elapsed_ns="$(($(date +%s%N)-$now))"  #stop the clock
     popd &>/dev/null
     local info="$(cat "$temp_output"; rm -f "$temp_output")"

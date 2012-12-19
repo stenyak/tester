@@ -30,6 +30,11 @@ function get_interpreter()
     else echo "$bash_tester_path"
     fi
 }
+function get_timeout_ms()
+{
+    local input="$1"; shift
+    cat "$input" |grep "#\s*tester_timeout_ms.*#" |sed "s/\s*#\s*tester_timeout_ms\s*=\s*\([0-9]*\)\s*#\s*$/\1/g"
+}
 function is_unittest_results()
 {
     local line="$1"; shift
@@ -47,9 +52,12 @@ function run_test()
 {
     local input="$1"; shift
     local output="$1"; shift
-    local timeout=1
-    local ret=1
+    local timeout_ms="$1"; shift
     local command="$(get_interpreter "$input")"
+    local file_timeout_ms="$(get_timeout_ms "$input")"
+    test "$file_timeout_ms" != "" && timeout_ms="$file_timeout_ms"
+    local ret=1
+
     local timeout_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/timeout.sh"
     if ! test -f "$timeout_path"
     then
@@ -58,24 +66,42 @@ function run_test()
         exec 4<&1 #stdout
         exec 5<&2 #stderr
         exec > /dev/null 2>&1
-        "$timeout_path" -t "$timeout" bash -c "$command '$input' &> '$output'"
+        "$timeout_path" -t "$timeout_ms" bash -c "$command '$input' &> '$output'"
         ret="$?"
         exec 1<&4
         exec 2<&5
     fi
     return "$ret"
 }
-verbose=false
-for arg
-do
-    if [ "$arg" == "-v" ]; then verbose=true
-    else input="$arg"
+function process_parameters()
+{
+    # global variables
+    input=""
+    verbose=false
+    timeout_ms="2000" #default value
+    while [ "$#" -gt 0 ]
+    do
+        if [ "$1" == "-v" ]; then verbose=true
+        elif [ "$1" == "-t" ]; then shift; timeout_ms="$1"
+        else input="$1"
+        fi
+        shift
+    done
+    if [ "$input" == "" ]; then
+        echo "Missing input parameter value. E.g. $0 test.sh"
+        exit 1
     fi
-done
+    if [ "$timeout_ms" == "" ]; then
+        echo "Missing timeout_ms parameter value. E.g. $0 $input -t 500"
+        exit 1
+    fi
+}
+
+process_parameters "$@"
 output="$(tmp_file)"
 
 check_extension "$input" "$output"
-run_test "$input" "$output"
+run_test "$input" "$output" "$timeout_ms"
 ret=$?
 
 line="$(head -n 1 "$output")"
