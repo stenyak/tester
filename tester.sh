@@ -33,14 +33,14 @@ function get_interpreter()
 function is_unittest_results()
 {
     local line="$1"; shift
-    #unittest results line looks like: FFFF..F.F.FF..F
+    #unittest results line looks like: FFFEEEF.F.FF..F
     if [ "$line" == "" ]
     then
         #empty first line, not a results line
         false
     else
-        #if first line has anything other than 'F' and '.' its not a results line
-        echo "$line" | grep -v "[^F\.]" &>/dev/null
+        #if first line has anything other than 'F' , "E" or '.' its not a results line
+        echo "$line" | grep -v "[^FE\.]" &>/dev/null
     fi
 }
 function run_test()
@@ -81,7 +81,7 @@ ret=$?
 line="$(head -n 1 "$output")"
 if is_unittest_results "$line"
 then
-    fail=$(echo "$line" | grep -o "F" |wc -l)
+    fail=$(echo "$line" | grep -o "\(F\|E\)" |wc -l)
     pass=$(echo "$line" | grep -o "\." |wc -l)
     total=$(($fail + $pass))
     if [ "$fail" -gt "0" ]
