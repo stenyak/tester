@@ -85,7 +85,8 @@ function relative_path()
 function run_test()
 {
     local file="$1"; shift
-    echo -ne "== Running $(relative_path "$file") : \t" |expand -t 63
+    local max_path_len="$1"; shift
+    echo -ne "== Running $(relative_path "$file") : \t" |expand -t "$(($max_path_len+14))"
     local tester_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/tester.sh"
     if ! test -f "$tester_path"; then echo "Error: helper timeout script not found at $tester_path"; exit 1; fi
 
@@ -188,10 +189,19 @@ function run_tests()
     local files="$1"; shift
     local result=0
     local IFS=$'\n'
+    local max_path_len=0
+    for file in $files
+    do
+        local len="$(echo "$(relative_path "$(real_path "$file")")" | wc -c)"
+        if [ "$len" -gt "$max_path_len" ]
+        then
+            max_path_len="$len"
+        fi
+    done
     for file in $files
     do
         file="$(real_path "$file")"
-        run_test "$file"
+        run_test "$file" "$max_path_len"
         ret=$?
         result=$(($result+$ret))
     done
