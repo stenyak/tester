@@ -3,8 +3,10 @@
 # This software is released under the GNU GENERAL PUBLIC LICENSE (see gpl-3.0.txt or www.gnu.org/licenses/gpl-3.0.html)
 
 verbose=false
-timeout_ms=1000
-for arg; do if [ "$arg" == "-v" ]; then verbose=true; fi; done
+timeout_ms=2000
+warning_ms=1000
+output_lines=25
+
 function find_files()
 {
     local -a dirs=()
@@ -30,7 +32,6 @@ function find_files()
         fi
         shift
     done
-    filters="${filters:-"-iname *_test.??"}"
 
     local files=""
     for dir in "${dirs[@]}"
@@ -39,29 +40,45 @@ function find_files()
         then
             files="$files\n"
         fi
-        files="$files$(sh -c "find '$dir' $filters; printf '\n'" 2>/dev/null)"
+        files="$files$(sh -c "find '$dir' -type f $filters; printf '\n'" 2>/dev/null)"
     done
     printf "\n$files\n" | sort
 }
 function reason_to_text()
 {
     local reason="$1"; shift
-    local reason_text=""
+    local text="default"
+    local color="$RESET"
+    case "$reason" in
+       "PASS") text="pass"
+    ;; "FAIL") text="fail"
+    ;; "TOUT") text="time out"
+    ;; "WHAT") text="unknown"
+    ;; "NOOP") text="empty"
+    ;; *)      text="huh?"
+    ;; esac
+    if [ "$reason" == "PASS" ]; then color="$DGREEN"; else color="$DRED"; fi
+    echo "$color$text$RESET"
+}
+function reason_to_explanation()
+{
+    local reason="$1"; shift
+    local explanation=""
     case "$reason" in
        "PASS")
-        reason_text="all tests passed"
+        explanation="all tests passed"
     ;; "FAIL")
-        reason_text="some tests failed"
+        explanation="some tests failed"
     ;; "TOUT")
-        reason_text="timed out while running tests"
+        explanation="timed out while running tests"
     ;; "WHAT")
-        reason_text="incorrect test format"
+        explanation="incorrect test format"
     ;; "NOOP")
-        reason_text="no tests were defined"
+        explanation="no tests were defined"
     ;; *)
-        reason_text="unknown reason"
+        explanation="unknown reason"
     ;; esac
-    echo "$reason_text"
+    echo "$explanation"
 }
 function tmp_file()
 {
@@ -86,7 +103,8 @@ function run_test()
 {
     local file="$1"; shift
     local max_path_len="$1"; shift
-    echo -ne "== Running $(relative_path "$file") : \t" |expand -t "$(($max_path_len+14))"
+    echo -ne "$(relative_path "$file")\t" |expand -t "$(($max_path_len+1))"
+
     local tester_path="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/tester.sh"
     if ! test -f "$tester_path"; then echo "Error: helper timeout script not found at $tester_path"; exit 1; fi
 
@@ -113,44 +131,31 @@ function run_test()
     pass=${pass:-0}
     total=${total:-0}
     test -f "$output" || { printf "\nIncorrect output from tester.sh:\n$info\n" >&2; exit 2; }
+    if [ "$elapsed_ns" -gt "${warning_ms}000000" ]
+    then
+        elapsed_text="${DYELLOW}${elapsed}s${RESET}"
+    else
+        elapsed_text="${elapsed}s"
+    fi
 
     local result=0
-    if [ "$reason" == "PASS" ]
+    echo -e "$pass/$total \t$(reason_to_text "$reason") \tin ${elapsed_text}" | expand --tabs=10,35
+    if [ "$reason" != "PASS" ]
     then
-        echo -ne "${DGREEN}"
-            echo -e "   passed${RESET} $pass/$total in ${elapsed}s"
-    else
-        echo -ne "${DRED}"
-        case "$reason" in
-           "FAIL")
-            echo -ne "   failed"
-        ;; "TOUT")
-            echo -ne "timed out"
-        ;; "WHAT")
-            echo -ne "  unknown"
-        ;; "NOOP")
-            echo -ne "    empty"
-        ;; *)
-            echo -ne "     huh?"
-            reason_text="unknown reason"
-        ;; esac
-        echo -ne "${RESET} $fail/$total in "
-        if [ "$elapsed_ns" -gt "${timeout_ms}000000" ]
-        then
-            echo -e "${DRED}${elapsed}s${RESET}"
-        else
-            echo -e "${elapsed}s"
-        fi
         result="$(($result+1))"
-        local out="$DRED"
-        local DRED="$RESET"
         if $verbose
         then
-            local nlines=50
-            echo -e "\t${DRED}Return code:${RESET} $ret\t\t${DRED}Working dir:${RESET} $dir"
-            echo -e "\t${DRED}Reason:${RESET} $(reason_to_text "$reason")"
-            echo -e "\t${out}Output${RESET} (only showing last $nlines lines, full output at $output ):${RESET}"
-            cat "$output" | tail -n "$nlines" |sed "s/^/\t\t/g"
+            echo -e "\tReturn code: $ret\t\tWorking dir: $dir"
+            echo -e "\tReason: $(reason_to_explanation "$reason")"
+            local skipped_output="$(($(cat "$output" |wc -l) - $output_lines))"
+            if [ "$skipped_output" -gt "0" ]
+            then
+                echo -e "\t${DRED}Output${RESET} ($skipped_output lines were skipped, read full log at $output ):${RESET}"
+            else
+                echo -e "\t${DRED}Output${RESET}:"
+            fi
+            cat "$output" | tail -n "$output_lines" |sed "s/^/\t\t/g"
+            if [ "$skipped_output" -gt "0" ]; then rm -f "$output"; fi
             #echo -e "\t${DRED}Full status:${RESET} $info"
         fi
     fi
@@ -233,6 +238,7 @@ function main()
     local nicetester_fail=0
     local nicetester_total=0
 
+    for arg; do if [ "$arg" == "-v" ]; then verbose=true; fi; done
     echo -n "Finding candidate tests..."
     files="$(find_files "$@")"
     nfiles="$((printf "$files") |wc -l |sed "s/ *//g")"
