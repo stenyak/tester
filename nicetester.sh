@@ -151,11 +151,12 @@ function run_test()
             if [ "$skipped_output" -gt "0" ]
             then
                 echo -e "\t${DRED}Output${RESET} ($skipped_output lines were skipped, read full log at $output ):${RESET}"
+                cat "$output" | tail -n "$output_lines" |sed "s/^/\t\t/g"
             else
                 echo -e "\t${DRED}Output${RESET}:"
+                cat "$output"
+                rm -f "$output"
             fi
-            cat "$output" | tail -n "$output_lines" |sed "s/^/\t\t/g"
-            if [ "$skipped_output" -gt "0" ]; then rm -f "$output"; fi
             #echo -e "\t${DRED}Full status:${RESET} $info"
         fi
     fi
