@@ -137,6 +137,13 @@ function run_test()
     else
         elapsed_text="${elapsed}s"
     fi
+    elapsed_text="${elapsed_text} "
+    local groups=$((($elapsed_ns / 1000000)/500))
+    while [ "$groups" -gt "0" ]
+    do
+        elapsed_text="${elapsed_text}."
+        groups="$(($groups-1))"
+    done
 
     local result=0
     echo -e "$pass/$total \t$(reason_to_text "$reason") \tin ${elapsed_text}" | expand --tabs=10,35
