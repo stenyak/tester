@@ -182,7 +182,7 @@ function show_results
     echo "($total tests run in ${elapsed}s)"
     if [ "$total" -eq "0" ]
     then
-        echo -e "${YELLOW}WARNING! No tests were found.$RESET"
+        echo -e "${YELLOW}WARNING! No tests were found (need help? try '-h')$RESET"
         echo -e "${DYELLOW} Get to work and write some tests!$RESET"
     else
         if [ "$fail" -eq "0" -a "$ret" -eq "0" ]
