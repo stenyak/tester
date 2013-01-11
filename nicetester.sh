@@ -229,6 +229,33 @@ function run_tests()
     return "$result"
 }
 
+function show_help()
+{
+    echo -e "NAME"
+    echo -e "\t$(basename $0) - run python and bash tests"
+    echo ""
+    echo -e "SYNOPSIS"
+    echo -e "\t$0 [OPTION]... TARGET..."
+    echo ""
+    echo -e "DESCRIPTION"
+    echo -e "\tTest the files specified by TARGET, showing a summary of results."
+    echo ""
+    echo -e "\tInternally, 'find -type f TARGET' will be executed for each target, and the matched files tested."
+    echo -e "\tTherefore, each TARGET can be a file or a directory."
+    echo ""
+    echo -e "\t-v"
+    echo -e "\t\tdo not summarize each test, show its full output and execution context"
+    echo ""
+    echo -e "\t-name FILTER"
+    echo -e "\t\tfilters file paths by name, according to 'find' -name parameter"
+    echo ""
+    echo -e "\t-iname FILTER"
+    echo -e "\t\tfilters file paths by case name, according to 'find' -iname parameter (that is, case insensitively)"
+    echo ""
+    echo -e "\t-h"
+    echo -e "\t\tdisplays this help message"
+    echo ""
+}
 
 function main()
 {
@@ -247,6 +274,7 @@ function main()
     local nicetester_total=0
 
     for arg; do if [ "$arg" == "-v" ]; then verbose=true; fi; done
+    for arg; do if [ "$arg" == "-h" ]; then show_help; return 0; fi; done
     echo -n "Finding candidate tests..."
     files="$(find_files "$@")"
     nfiles="$((printf "$files") |wc -l |sed "s/ *//g")"
