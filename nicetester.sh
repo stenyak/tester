@@ -19,7 +19,7 @@ function find_files()
             filters="$filters '$1'"
             is_filter_param=false
         else
-            if [ "$1" == "-name" -o "$1" == "-iname" ]
+            if [ "$1" == "-name" -o "$1" == "-iname" -o "$1" == "-regex" -o "$1" == "-iregex" ]
             then
                 filters="$filters $1"
                 is_filter_param=true
@@ -250,7 +250,13 @@ function show_help()
     echo -e "\t\tfilters file paths by name, according to 'find' -name parameter"
     echo ""
     echo -e "\t-iname FILTER"
-    echo -e "\t\tfilters file paths by case name, according to 'find' -iname parameter (that is, case insensitively)"
+    echo -e "\t\tfilters file paths by name, according to 'find' -iname parameter (that is, case insensitively)"
+    echo ""
+    echo -e "\t-regex FILTER"
+    echo -e "\t\tfilters file paths by regex, according to 'find' -regex parameter"
+    echo ""
+    echo -e "\t-iregex FILTER"
+    echo -e "\t\tfilters file paths by regex, according to 'find' -iregex parameter (that is, case insensitively)"
     echo ""
     echo -e "\t-h"
     echo -e "\t\tdisplays this help message"
