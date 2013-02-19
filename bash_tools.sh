@@ -2,7 +2,7 @@
 ##############################################
 # Public helper functions (for use by test scripts)
 
-# Like grep, but outputs all lines (not just matched lines). E.g.:
+# Like grep, but outputs all lines (not just matched lines) in case of error. E.g.:
 #    echo "all is correct" |& catgrep "correct"    #OK
 #    echo "an error occurred" |& catgrep "correct"  #FAIL
 function catgrep
@@ -13,7 +13,9 @@ function catgrep
     echo "">>$tmp
     grep "$@" "$tmp" &>/dev/null
     local ret=$?
-    cat $tmp
+    if [ "$ret" != "0" ]; then
+        cat $tmp
+    fi
     rm -f $tmp
     return $ret
 }
@@ -23,13 +25,19 @@ function catgrep
 #    TEST echo "an error occurred" |& catngrep "error"    #FAIL
 function catngrep
 {
-    cat | catgrep "$@"
-    local retn=$?
-    if [ "$retn" == "1" ]
-    then
-        return 0
+    local tmp="$(tempfile)"
+    touch $tmp
+    cat >$tmp
+    echo "">>$tmp
+    grep "$@" "$tmp" &>/dev/null
+    local ret=$?
+    if [ "$ret" == "0" ]; then
+        cat $tmp
+        ret=1
     else
-        return 1
+        ret=0
     fi
+    rm -f $tmp
+    return $ret
 }
 ##############################################
