@@ -1,10 +1,7 @@
 #!/bin/bash
-##############################################
-# Public helper functions (for use by test scripts)
-
 # Like grep, but outputs all lines (not just matched lines) in case of error. E.g.:
 #    echo "all is correct" |& catgrep "correct"    #OK
-#    echo "an error occurred" |& catgrep "correct"  #FAIL
+#    echo "an error occurred" |& catgrep "correct"  #FAIL, will echo the input
 function catgrep
 {
     local tmp="$(tempfile)"
@@ -21,8 +18,8 @@ function catgrep
 }
 
 # Like catgrep, but returns 0 only when NO match was found. E.g.:
-#    TEST echo "all is correct" |& catngrep "error"  #OK
-#    TEST echo "an error occurred" |& catngrep "error"    #FAIL
+#    echo "all is correct" |& catngrep "error"  #OK
+#    echo "an error occurred" |& catngrep "error"    #FAIL, will echo the input
 function catngrep
 {
     local tmp="$(tempfile)"
@@ -40,4 +37,3 @@ function catngrep
     rm -f $tmp
     return $ret
 }
-##############################################
