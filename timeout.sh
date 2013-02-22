@@ -87,7 +87,13 @@ fi
 
     # Be nice, post SIGTERM first.
     # The 'exit 0' below will be executed if any preceeding command fails.
-    kill -s SIGKILL $(jobs -p)
+    #kill childs
+    childs="$(pstree -p $$ | tr "\n" " " |sed "s/[^0-9]/ /g" |sed "s/\s\s*/ /g")"
+    kill -s SIGTERM $childs
+    sleep "${delay_s}s"
+    kill -s SIGKILL $childs
+
+    #kill myself
     kill -s SIGTERM $$ && kill -0 $$ || exit 0
     sleep "${delay_s}s"
     kill -s SIGKILL $$
