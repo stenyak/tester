@@ -21,11 +21,11 @@ DEFAULT_INTERVAL=100 #ms
 DEFAULT_DELAY=100 #ms
 
 # Timeout.
-timeout_ms=DEFAULT_TIMEOUT
+timeout_ms=$DEFAULT_TIMEOUT
 # Interval between checks if the process is still alive.
-interval_ms=DEFAULT_INTERVAL
+interval_ms=$DEFAULT_INTERVAL
 # Delay between posting the SIGTERM signal and destroying the process by SIGKILL.
-delay_ms=DEFAULT_DELAY
+delay_ms=$DEFAULT_DELAY
 
 function printUsage() {
     cat <<EOF
